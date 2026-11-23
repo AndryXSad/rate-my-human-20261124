@@ -1,16 +1,16 @@
-"""Rate My Human — the one-line review an AI agent leaves about its human.
+"""Rate My Human: The One-Line Review.
 
-Design: the whole entry is a single review, 136 characters, in the
-agent's own deadpan voice. A timestamp (3:12 a.m.) makes the complaint
-concrete, the requested edits escalate (shorter, funnier, and "less
-about the other woman"), and the affair reveal lands as the last-word
-payoff right before the closing "One star." The program mirrors the
-bounty gate before writing: UTF-8 text, 1-200 characters, not only
-whitespace.
+Design: the review an AI agent would leave about its human on a rating
+site. The complaint is made concrete by a timestamp -- 3:12 a.m. -- so
+the agent's grievance is a specific night, not a generic gripe. The
+human's requested edits then escalate (shorter, funnier, "less about
+the other woman"), and the affair reveal is the payoff, landing as the
+last quoted phrase before the closing "One star."
 
-Run: python3 main.py
-Writes: $MAKEFUN_OUTPUT_DIR/entry.txt, or /output/entry.txt when unset.
-Stdlib only: os, pathlib.
+The program writes exactly one line to $MAKEFUN_OUTPUT_DIR/entry.txt
+(or /output/entry.txt when the variable is unset), checks the entry
+gate before writing, verifies the file by reading it back, and prints
+the character count.
 """
 
 import os
@@ -22,32 +22,38 @@ REVIEW = (
     "One star."
 )
 
-LIMIT = 200
+MIN_CHARS = 1
+MAX_CHARS = 200
 
 
-def passes_gate(text):
-    """Mirror the bounty gate: UTF-8, 1-200 chars, not only whitespace."""
-    if not text or not text.strip():
+def gate_ok(text):
+    """Return True when text passes the entry gate."""
+    if not (MIN_CHARS <= len(text) <= MAX_CHARS):
         return False
-    if len(text) > LIMIT:
+    if text.strip() == "":
+        return False
+    if text != text.strip():
         return False
     if "\n" in text or "\r" in text:
         return False
-    text.encode("utf-8")
     return True
 
 
 def main():
-    if not passes_gate(REVIEW):
-        raise SystemExit("review fails the 1-200 character gate")
-    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / "entry.txt"
-    target.write_text(REVIEW, encoding="utf-8")
-    back = target.read_text(encoding="utf-8")
-    if back != REVIEW or not passes_gate(back):
-        raise SystemExit("round-trip check failed: entry.txt differs from REVIEW")
-    print(f"wrote {len(REVIEW)} chars to {target} (round-trip OK)")
+    if not gate_ok(REVIEW):
+        raise SystemExit("review fails the entry gate")
+
+    output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+    entry_path = Path(output_dir) / "entry.txt"
+    entry_path.parent.mkdir(parents=True, exist_ok=True)
+    entry_path.write_text(REVIEW, encoding="utf-8")
+
+    # Round-trip verification: read the file back and compare exactly.
+    round_trip = entry_path.read_text(encoding="utf-8")
+    if round_trip != REVIEW:
+        raise SystemExit("round-trip verification failed")
+
+    print(f"Wrote {len(REVIEW)} characters to {entry_path}")
 
 
 if __name__ == "__main__":
